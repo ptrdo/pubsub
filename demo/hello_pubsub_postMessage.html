@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width">
+  <title>pubsub: Simple</title>
+  <meta name="publisher" content="ptrdo">
+  <meta name="copyright" content="2022">
+  <meta name="language" content="English">
+  <meta name="revised" content="2022/10/20">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src *;connect-src 'self' blob: *.googleapis.com; font-src 'self' *.gstatic.com *.googleapis.com; form-action 'self'; frame-src 'self' blob: *.googleapis.com; img-src 'self' blob: data: 'unsafe-eval' *.googleapis.com; navigate-to 'self' blob: data:; object-src 'self' blob: 'unsafe-inline' 'unsafe-eval' *.googleapis.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: *.googleapis.com; script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' *.googleapis.com; style-src 'self' 'unsafe-inline' 'unsafe-eval' *.googleapis.com; style-src-elem 'self' 'unsafe-inline' *.googleapis.com; worker-src 'self' 'strict-dynamic' blob: *.googleapis.com;">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&display=swap" rel="stylesheet">
+  <style>
+    * {
+      -webkit-box-sizing: border-box;
+      -moz-box-sizing: border-box;
+      box-sizing: border-box;
+    }
+    html,body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    body main {
+      padding: 2rem;
+    }
+    html,body,select,option,textarea {
+      font-family: "IBM Plex Mono", sans-serif;
+      font-weight: normal;
+      font-size: 100%;
+      font-size: unset;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    form {
+      display: inline-block;
+    }
+    fieldset {
+      display: inline-block;
+      padding: 1rem 2rem;
+      min-width: 32rem;
+      margin: 1rem;
+      padding: 1em 2em;
+    }
+    label {
+      line-height: 2;
+    }
+    input,select,option,textarea {
+      display: block;
+      width: 100%;
+      margin: 0;
+      margin-bottom: 1em;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 100%;
+      line-height: 2;
+      background-color: rgba(255,255,255,0.5);
+    }
+    select,option {
+      height: 2em;
+      padding-left: 4px;
+    }
+    input:focus,
+    select:focus,
+    button:focus {
+      outline: 1px solid black
+    }
+    input[type=text],textarea {
+      width: 100%;
+      padding-left: 8px;
+      border: 1px solid black;
+    }
+    textarea {
+      padding: 0.5em;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre-line;
+      resize: both;
+    }
+    input[type=text]:focus,
+    textarea:focus {
+      outline: none;
+      background: rgb(250, 250, 229);
+    }
+    input[type=reset],
+    input[type=submit] {
+      padding: 2px;
+      cursor: pointer;
+    }
+    input[type=reset]:hover,
+    input[type=submit]:hover {
+      background-color: #00b3ff;
+    }
+    input[type=reset]:active,
+    input[type=submit]:active {
+      background-color: #0072a2;
+    }
+    hr {
+      margin: 1em 0;
+      height: 1px;
+      box-shadow: none;
+      border: none;
+      border-bottom: 1px solid #ddd;
+    }
+    output {
+      display: inline-block;
+      width: 100%;
+      height: auto;
+      min-width: 100%;
+      min-height: 12em;
+      margin: 1em 0;
+      padding: 0.5em;
+      font-family: "IBM Plex Mono", monospace;
+      line-height: 1.3;
+      word-break: break-all;
+      color: orangered;
+      border: 1px solid silver;
+      resize: both;
+    }
+    ::-webkit-input-placeholder {
+      color: #4d8bb8;
+      font-family: "IBM Plex Mono", sans-serif;
+      font-style: italic;
+      font-size: 16px;
+    }
+    :-moz-placeholder,
+    ::-moz-placeholder {
+      color: #4d8bb8;
+      font-family: "IBM Plex Mono", sans-serif;
+      font-style: italic;
+      font-size: 16px;
+      opacity: 1;
+    }
+    :-ms-input-placeholder {
+      color: #4d8bb8;
+      font-family: "IBM Plex Mono", sans-serif;
+      font-style: italic;
+      font-size: 16px;
+    }
+    dl {
+      display: inline-block;
+      width: auto;
+      max-width: 23rem;
+      vertical-align: top;
+    }
+    dl dt {
+      margin-bottom: 0.5em;
+    }
+    dl dd {
+      padding: 4px 8px;
+      margin-left: 0;
+      line-height: 1;
+      color: orangered;
+    }
+    dl dd[itemid] {
+      color: #0072a2;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    dl dd[itemid]:hover {
+      background-color: #fefe88;
+    }
+    dl dd ins {
+      font-weight: bold;
+      text-decoration: none;
+    }
+    dl dd hr {
+      margin: 0.5em 0;
+    }
+    .antecedent-child dl dd ins {
+      display: none;
+    }
+    .antecedent-child dl dd[itemid=""] {
+      display: none;
+    }
+    footer {
+      width: 100%;
+      word-break: break-all;
+    }
+  </style>
+  <script type="module">
+    document.addEventListener("DOMContentLoaded", () => {
+
+      alert("This demo is not currently functional! It must run in an iframe.");
+
+      let child = null;
+      let antecedent = null;
+      const api = "https://[some.site.domain]";
+      const url = window.location.href;
+
+      let example = document.querySelector("footer");
+      example.innerText = `Example: {"observer":"${url}","getter":"antecedent.app.getVersion"}`;
+
+      child = (window.location !== window.parent.location) && /[some.site.domain]|localhost/i.test(window.location.host);
+      if (child) {
+        antecedent = parent;
+        document.body.classList.add("antecedent-child");
+      }
+
+      const objectify = function (value) {
+        if (Array.isArray(value) || value?.constructor === Object) {
+          return JSON.stringify(value);
+        } else {
+          try {
+            let reply = JSON.parse(value);
+            return JSON.parse(JSON.stringify(reply));
+          } catch(e) {
+            return value;
+          }
+        }
+      };
+
+      let statusUI = document.getElementById("status");
+      statusUI.addEventListener("click", event => {
+        event.stopPropagation();
+        let item = event.target.closest("DD");
+        if (!!item) {
+          antecedent = window.open(api, "_blank");
+        }
+      });
+
+      let demoForm = document.forms[0];
+      demoForm.addEventListener("submit", event => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        let message = objectify(demoForm.querySelector("[name=input]").value);
+
+        if (!antecedent || antecedent.closed) {
+          alert("A parent window must be visible from here!");
+        } else {
+          antecedent.postMessage(message,"*");
+          console.warn("The postMessage test page has SENT a message!", message);
+        }
+      });
+
+      let demoOutput = document.querySelector("output[name=output]");
+      window.addEventListener("message", event => {
+        console.warn("The postMessage test page has HEARD a message!", event);
+        if ("data" in event) {
+          if ("response" in event.data && !!event.data.response) {
+            if (Array.isArray(event.data.response)) {
+              demoOutput.innerText = `RESPONSE: [${event.data.response.join(",")}]`;
+            } else if (/string/i.test(event.data.response)) {
+              demoOutput.innerText = `RESPONSE: ${event.data.response}`;
+            } else {
+              let parse = objectify(event.data.response);
+              demoOutput.innerText = `RESPONSE: ${/\\"/.test(parse) ? JSON.stringify(JSON.parse(parse)) : JSON.stringify(parse)}`;
+            }
+          } else if ("payload" in event.data && !!event.data.payload) {
+            demoOutput.innerText = "PAYLOAD: " + objectify(event.data.payload);
+          } else {
+            demoOutput.innerText = "DATA: " + objectify(event.data);
+          }
+        } else {
+          demoOutput.innerText = "See console log for event response.";
+        }
+      });
+
+    });
+  </script>
+</head>
+<body>
+<main>
+  <article>
+    <section>
+      <form name="cell" spellcheck="false" autocomplete="off">
+        <fieldset>
+          <legend>Custom Event</legend>
+          <label>[1]</label>
+          <textarea name="input" rows="10" placeholder="raw payload here"></textarea>
+          <nav>
+            <input type="submit" value="Subscribe" title="" tabindex="0">
+            <input type="reset" value="Unsubscribe" title="" tabindex="2">
+          </nav>
+          <details open="open">
+            <summary>Output</summary>
+            <output name="output" for="input"></output>
+          </details>
+        </fieldset>
+      </form>
+    </section>
+  </article>
+  <dl id="status">
+    <dt>Status:</dt>
+    <dd>This page is <ins>not </ins>in an iframe</dd>
+    <dd itemid>Launch a dependent window</dd>
+  </dl>
+  <footer>Example: {"observer":"https://[PATH/TO]/hello_pubsub.html","getter":"antecedent.app.getVersion"}</footer>
+</main>
+</body>
+</html>
